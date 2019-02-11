@@ -1,6 +1,8 @@
 /*
   A library to manage u-blox M8 GNSS receiver modules. It is particularly suited
   for precision timing applications.
+
+  Added to Github on February 11, 2019
 */
 
 #ifndef u-blox-m8_h
