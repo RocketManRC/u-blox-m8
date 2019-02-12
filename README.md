@@ -1,7 +1,10 @@
 # u-blox-m8
 A library for managing u-blox m8 GNSS receivers, particularly suited for precision timing applications.
 
+# Background
 This is a library for managing the u-blox M8 series of GNSS (“GPS”) receiver modules. It is particularly suited for precision timing applications and is key part of the OpenPPS project. It uses the u-blox UBX binary protocol exclusively.
+
+Why did I create yet another u-blox library? First of all I wanted it to be processor independent as much as possible and in particular I wanted it to run on the ESP32. Secondly I wanted to take advantage of some of the unique features of the u-blox M8 receivers for optimizing their use for timing applications. Finally, the way others handle the data stream from the receiver and in particular the parsing of the packets wasn't the way I like to do things like this :-)
 
 The most common variants of the M8 family appear to be the M8Q and M8N which as far as I can tell just have different physical form factors. There are also LEA and NEO versions of the M8N and once again these appears to be just different sizes and pin arrangements.
 
@@ -15,10 +18,10 @@ This library has the following features:
 
 * Uses the Arduino framework (could easily be made independent of it).
 * The library is contained in a single header file u-blox-m8.h which makes it easy to integrate into a project.
-* Works best with hardware serial ports such as on the ESP32, Teensy and Adafruit M0 and M4 boards.
-* Depends on the main program to read from and write to the M8 module so the library is hardware independent.
-* The UBX parser is state machine based with single byte input which means it will not hold up the main loop when called there.
-* Includes functions to configure for best timing performance and monitor estimated accuracy.
+* It works best with hardware serial ports such as on the ESP32, Teensy and Adafruit M0 and M4 boards.
+* It depends on the main program to read from and write to the M8 receiver so the library is hardware independent.
+* The UBX parser is state machine based with single byte input which means it will not hold up the main loop when called from there.
+* It includes functions to configure the receiver for best timing performance and to monitor estimated accuracy.
 * Examples are provided for testing the library on an ESP32 board.
 
 The library does not directly deal with handling PPS pulses. A lot more information on that topic is available in the OpenPPS project: [OpenPPS](https://www.rocketmanrc/OpenPPS.html)
@@ -31,5 +34,4 @@ U-blox receivers can save their configuration on receipt of a UBX command howeve
 
 An important thing to note is that there is only one buffer for incoming messages and it is associated with the parser. This is only going to be a problem when we want to see the current configuration and change it.
 
-Keep in mind that that messages from the receiver can either be periodic or polled. Once you have periodic messages enabled then you can’t be sure when you issue a poll command for another message that you will get the one you want next. That is probably only an issue when the message being polled is going to be used for configuration as mentioned in the previous paragraph. In that case you will want to poll the message to get the existing configuration data and then as soon as that message is received make the desired changes and then send the message back. 
-
+Keep in mind that that messages from the receiver can either be periodic or polled. Once you have periodic messages enabled then you can’t be sure when you issue a poll command for another message that you will get the one you want next. That is probably only an issue when the message being polled is going to be used for configuration as mentioned in the previous paragraph. In that case you will want to poll the message to get the existing configuration data and then as soon as that message is received make the desired changes and then send the message back.

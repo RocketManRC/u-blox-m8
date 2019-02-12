@@ -5,10 +5,10 @@
   Added to Github on February 11, 2019
 */
 
-#ifndef u-blox-m8_h
-#define u-blox-m8_h
+#ifndef ubloxm8_h
+#define ubloxm8_h
 
-#include "Arduino.h"  // Only using Arduino Strings...
+#include "Arduino.h"  // Only using Arduino Strings and HardwareSerial...
 
 #define MAXBUFFERSIZE 1024  // using this to define the maximum buffer size
 
@@ -26,6 +26,8 @@ struct _header
   uint16_t  length;
 };
 
+// The NAV-PVT message is my one concession to the M7 receiver...
+
 // u-blox 7 nav-pvt packet
 
 struct _navpvt7hdr
@@ -41,7 +43,7 @@ typedef struct
   uint32_t  iTOW;
   uint16_t  year;
   uint8_t   month;
-  uint8_t   uday;
+  uint8_t   day;
   uint8_t   hour;
   uint8_t   min;
   uint8_t   sec;
@@ -85,7 +87,7 @@ typedef struct   // u-blox 8
   uint32_t  iTOW;
   uint16_t  year;
   uint8_t   month;
-  uint8_t   uday;
+  uint8_t   day;
   uint8_t   hour;
   uint8_t   min;
   uint8_t   sec;
@@ -263,7 +265,7 @@ struct _header *packetheaders[] = { (struct _header *)&navpvt7hdr, (struct _head
 
 const char *packetnames[] = { "navpvt7", "navpvt8", "cfgtp5", "ack", "nak", "navsat", "cfggnss" };
 
-enum class State { sync1, sync2, header, payload, check1, check2 };
+enum class State { sync1, sync2, header, payload, check };
 
 /*
   This is the class for parsing incoming packets. It uses a state-machine
@@ -304,7 +306,7 @@ class ublox
 
         case State::sync2:
         {
-            if( c == 0x62 )
+          if( c == 0x62 )
           {
             count++;
             state = State::header;
@@ -364,14 +366,17 @@ class ublox
             calculatechecksum( checksum, payload_p - 4, length + 4 );
 
             if( checksum[0] == c ) // check the first checksum byte
-              state = State::check2;
+              state = State::check;
             else
+            {
+              //Serial.println( " checksum error1" );
               state = State::sync1;
+            }
           }
         }
         break;
 
-        case State::check2:
+        case State::check:
         {
           if( c == checksum[1] )
           {
@@ -380,6 +385,7 @@ class ublox
           }
           else
           {
+            //Serial.println( " checksum error2" );
             state = State::sync1;
           }
         }
@@ -445,7 +451,6 @@ class navpvt8
     };
 
     uint32_t gettacc() { return ((_navpvt8 *)buffer)->tAcc; }
-    int32_t getnano() { return ((_navpvt8 *)buffer)->nano; }
     uint8_t getnumSV() { return ((_navpvt8 *)buffer)->numSV; }
     double getlon() { return ((_navpvt8 *)buffer)->lon * en7; }
     double getlat() { return ((_navpvt8 *)buffer)->lat * en7; }
@@ -454,6 +459,13 @@ class navpvt8
     int32_t getvAcc() { return ((_navpvt8 *)buffer)->vAcc; }
     double getpDOP() { return ((_navpvt8 *)buffer)->pDOP * 0.01L; }
     uint8_t getflags() { return ((_navpvt8 *)buffer)->flags; }
+    uint16_t getyear() { return ((_navpvt8 *)buffer)->year; }
+    uint8_t getmonth() { return ((_navpvt8 *)buffer)->month; }
+    uint8_t getday() { return ((_navpvt8 *)buffer)->day; }
+    uint8_t gethour() { return ((_navpvt8 *)buffer)->hour; }
+    uint8_t getminute() { return ((_navpvt8 *)buffer)->min; }
+    uint8_t getsecond() { return ((_navpvt8 *)buffer)->sec; }
+    int32_t getnano() { return ((_navpvt8 *)buffer)->nano; }
 
   private:
     uint8_t *buffer;
@@ -831,7 +843,7 @@ void enableNavPvt()
     sendPacket(packet, sizeof(packet));
 }
 
-// Send a packet to the receiver to enable NAV-PVT messages
+// Send a packet to the receiver to enable NAV-SAT messages
 void enableNavSat()
 {
     // CFG-MSG packet
@@ -950,4 +962,4 @@ void pollSatNavParameters()
   sendPacket(packet, sizeof(packet));
 }
 
-#endif  // u-blox-m8_h
+#endif
