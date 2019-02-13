@@ -32,7 +32,9 @@ The reference document for the u-blox M8 receiver is here: [M8 Protocol Descript
 
 This library is organized in a format suitable for development with PlatfromIO. To manually install it download the project from Github in a zip file and unpack it in your PlatformIO projects folder. Then open a terminal from the PlatformIO toolbar (a terminal, not the serial terminal) and navigate to the project folder. Type the command 'pio init' to initialize the project then it can be opened from the PlatformIO home page in your IDE.
 
-The example program esp32oled requires the ESP8266_SSD1306 library by Daniel Eichhorn which can be installed in PlatformIO from the home page.
+The example program esp32basic shows a simple use of the library and should run on any ESP32 and probably many other processors. This will be the main program that is compiled unless the option in platformio.ini is changed.
+
+The example program esp32oled requires the ESP8266_SSD1306 library by Daniel Eichhorn which can be installed in PlatformIO from the home page. This is for one of those inexpensive boards that include a 128x64 OLED. The part for displaying on the OLED is minimal and can easily be removed.
 
 It should be possible to use this library with the Aruino IDE as well but I have not tried that at this point in time. I am pretty sure that it is going to require processors with hardware serial ports as the UBX protocol can have packets that are quite large (typically 280+ bytes for the UBX-NAV-SAT message) and it can be tricky to avoid losing packet bytes even with hardware serial ports because the rx buffer is a maximum of 256 bytes.
 
@@ -40,4 +42,4 @@ U-blox receivers can save their configuration on receipt of a UBX command howeve
 
 An important thing to note is that there is only one buffer for incoming messages and it is associated with the parser. This is only going to be a problem when we want to see the current configuration and change it.
 
-Keep in mind that that messages from the receiver can either be periodic or polled. Once you have periodic messages enabled then you can’t be sure when you issue a poll command for another message that you will get the one you want next. That is probably only an issue when the message being polled is going to be used for configuration as mentioned in the previous paragraph. In that case you will want to poll the message to get the existing configuration data and then as soon as that message is received make the desired changes and then send the message back.
+Keep in mind that that messages from the receiver can either be periodic or polled. Once you have periodic messages enabled then you can’t be sure when you issue a poll command for another message that you will get the one you want next. That is probably only an issue when the message being polled is going to be used for configuration as mentioned in the previous paragraph. In that case you will want to poll the message to get the existing configuration data and then as soon as that message is received make the desired changes and then send the message back. There are examples of how to do this in esp32oled.cpp.
