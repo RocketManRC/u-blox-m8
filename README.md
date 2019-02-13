@@ -36,6 +36,8 @@ The example program esp32basic shows a simple use of the library and should run 
 
 The example program esp32oled requires the ESP8266_SSD1306 library by Daniel Eichhorn which can be installed in PlatformIO from the home page. This is for one of those inexpensive boards that include a 128x64 OLED. The part for displaying on the OLED is minimal and can easily be removed.
 
+![Photo](docs/images/esp32oled.jpg)
+
 It should be possible to use this library with the Aruino IDE as well but I have not tried that at this point in time. I am pretty sure that it is going to require processors with hardware serial ports as the UBX protocol can have packets that are quite large (typically 280+ bytes for the UBX-NAV-SAT message) and it can be tricky to avoid losing packet bytes even with hardware serial ports because the rx buffer is a maximum of 256 bytes.
 
 U-blox receivers can save their configuration on receipt of a UBX command however this is probably never a good idea, especially from a developer’s perspective. This library is going to be easiest to use if the receiver is in its default configuration to start with and during development it is important to remember that after you have changed something (like for example the baud rate) it will remain that way until the receiver is power cycled. It is easy to structure commands so that this doesn’t matter. For example if we are changing the baud rate from the default of 9600 to 115200 that command will be ignored if the baud rate is already 115200 which is fine but if we want to change our code so the baud rate is different from 115200 then the power needs to be cycled before we can test that. Just saying!
