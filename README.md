@@ -30,6 +30,12 @@ The reference document for the u-blox M8 receiver is here: [M8 Protocol Descript
 
 # Using the Library
 
+This library is organized in a format suitable for development with PlatfromIO. To manually install it download the project from Github in a zip file and unpack it in your PlatformIO projects folder. Then open a terminal from the PlatformIO toolbar (a terminal, not the serial terminal) and navigate to the project folder. Type the command 'pio init' to initialize the project then it can be opened from the PlatformIO home page in your IDE.
+
+The example program esp32oled requires the ESP8266_SSD1306 library by Daniel Eichhorn which can be installed in PlatformIO from the home page.
+
+It should be possible to use this library with the Aruino IDE as well but I have not tried that at this point in time. I am pretty sure that it is going to require processors with hardware serial ports as the UBX protocol can have packets that are quite large (typically 280+ bytes for the UBX-NAV-SAT message) and it can be tricky to avoid losing packet bytes even with hardware serial ports because the rx buffer is a maximum of 256 bytes.
+
 U-blox receivers can save their configuration on receipt of a UBX command however this is probably never a good idea, especially from a developer’s perspective. This library is going to be easiest to use if the receiver is in its default configuration to start with and during development it is important to remember that after you have changed something (like for example the baud rate) it will remain that way until the receiver is power cycled. It is easy to structure commands so that this doesn’t matter. For example if we are changing the baud rate from the default of 9600 to 115200 that command will be ignored if the baud rate is already 115200 which is fine but if we want to change our code so the baud rate is different from 115200 then the power needs to be cycled before we can test that. Just saying!
 
 An important thing to note is that there is only one buffer for incoming messages and it is associated with the parser. This is only going to be a problem when we want to see the current configuration and change it.
