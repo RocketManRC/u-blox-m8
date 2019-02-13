@@ -6,7 +6,9 @@
 
 #include <Arduino.h>
 #include "u-blox-m8.h"
-#include "SSD1306.h" // this is the Adafruit library for the SSD1306 OLED driver
+
+// Need library ESP8266_SSD1306 by Daniel Eichhorn (or may say Fabrice Weinberg)
+#include "SSD1306.h"
 
 #define SERIALDEBUG 0
 
