@@ -24,7 +24,7 @@ This library has the following features:
 * It includes functions to configure the receiver for best timing performance and to monitor estimated accuracy.
 * Examples are provided for testing the library on an ESP32 board.
 
-The library does not directly deal with handling PPS pulses. A lot more information on that topic is available in the OpenPPS project: [OpenPPS](https://www.rocketmanrc/OpenPPS.html)
+The library does not directly deal with handling PPS pulses. A lot more information on that topic will be available in the upcoming OpenPPS project but for now here are some early notes on Google Docs: [OpenPPS](https://docs.google.com/document/d/1pgH2th--3oKmDTbd7h-_LfCK9mh3-_iBnJRLkP1W2Xk/edit?usp=sharing)
 
 The reference document for the u-blox M8 receiver is here: [M8 Protocol Description](https://www.u-blox.com/sites/default/files/products/documents/u-blox8-M8_ReceiverDescrProtSpec_(UBX-13003221)_Public.pdf)
 
