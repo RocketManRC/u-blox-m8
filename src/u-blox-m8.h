@@ -283,6 +283,7 @@ class ublox
     {
         state = State::sync1;
         count = 0;
+        checksumerrors = 0;
     };
 
     const char *parse( uint8_t c )
@@ -369,7 +370,7 @@ class ublox
               state = State::check;
             else
             {
-              //Serial.println( " checksum error1" );
+              checksumerrors++;
               state = State::sync1;
             }
           }
@@ -385,7 +386,7 @@ class ublox
           }
           else
           {
-            //Serial.println( " checksum error2" );
+            checksumerrors++;
             state = State::sync1;
           }
         }
@@ -412,6 +413,11 @@ class ublox
       }
     };
 
+    uint32_t getchecksumerrors()
+    {
+      return checksumerrors;
+    }
+
     uint8_t checksum[2];
     State state;
     uint16_t count;
@@ -419,6 +425,7 @@ class ublox
     uint8_t *payload_p;
     char *result = (char *)"";
     uint8_t buffer[sizeof(_buf)];
+    uint32_t checksumerrors; // this is to help look for buffer problems...
 };
 
 class navpvt7

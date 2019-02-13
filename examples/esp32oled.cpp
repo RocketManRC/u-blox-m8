@@ -19,8 +19,17 @@ cfgtp5 tp( gps );
 navsat ns( gps );
 cfggnss gc( gps );
 
+// these are things we are going to display so keep them global
 int satTypes[7];
 double snr;
+double sec;
+int hr;
+int mn;
+double sc;
+int numSV;
+double pDOP;
+uint32_t flags;
+int tacc;
 
 // Initialize the OLED display
 SSD1306  display( 0x3c, 5, 4 ); // Wemos board
@@ -84,16 +93,23 @@ void setup()
 
 void loop()
 {
+  static uint32_t ckerrors = 0;
+
+  int g = gps.getchecksumerrors();
+
+  if( g != ckerrors )
+  {
+    Serial.print( "checksum errors: " );
+    Serial.println( g );
+    ckerrors = g;
+  }
   // The following flags are for polling because it seems that a few
   // requests might be needed to get a response. So poll until we get one!
   static bool waitForCfgtp5 = true; // for config of the time pulse
   static bool waitForCfgGnss = true;// and the GNSS configuration (to disable SBAS)
 
-  while( /*int l = */ gpsSerial.available() )
+  while( gpsSerial.available() )
   {
-    //if( l >= 256 )
-    //  Serial.println( l );
-
     uint8_t c = gpsSerial.read();
 
     String r = (char *)gps.parse( c );
@@ -127,33 +143,15 @@ void loop()
         Serial.println( nav.gettacc() );
         Serial.println( nav.getflags(), 16 );
 #endif
-        // *** NOTE updating the OLED display here can cause the
-        // serial buffer to overflow when both NAV-PVT and NAV-SAT
-        // packets are being periodically sent. This needs to be fixed!
-        display.clear();
+        sec = 3600.0 * nav.gethour() + 60.0 * nav.getminute() + 1.0 * nav.getsecond() + nav.getnano() * 1e-9;
+        hr = sec / 3600;
+        mn = (sec - hr * 3600) / 60;
+        sc = sec - hr * 3600 - mn * 60;
 
-        char temp[40];
-
-        sprintf( temp, "SV:%2.2d  PD:%2.2f", nav.getnumSV(), nav.getpDOP() );
-        displayStatusMessage( 0, temp );
-
-        sprintf( temp, "0:%2.2d 6:%2.2d S:%3.1f", satTypes[0], satTypes[6], snr );
-        displayStatusMessage( 1, temp );
-
-        double sec = 3600.0 * nav.gethour() + 60.0 * nav.getminute() + 1.0 * nav.getsecond() + nav.getnano() * 1e-9;
-        int hr = sec / 3600;
-        int mn = (sec - hr * 3600) / 60;
-        double sc = sec - hr * 3600 - mn * 60;
-        sprintf( temp, "%2.2d:%2.2d:%f", hr, mn, sc );
-        displayStatusMessage( 2, temp );
-
-        sprintf( temp, "f:%X ns: %d", nav.getflags(), nav.gettacc() );
-        //sprintf( temp, "%2.2d:%2.2d:%2.2d", nav.gethour(), nav.getminute(), nav.getsecond() );
-        //static int count = 0;
-        //sprintf( temp, "%d", count++ );
-        displayStatusMessage( 3, temp );
-
-        display.display();
+        numSV = nav.getnumSV();
+        pDOP = nav.getpDOP();
+        flags = nav.getflags();
+        tacc =  nav.gettacc();
       }
       else if( r == "cfgtp5" )
       {
@@ -228,6 +226,32 @@ void loop()
 #if SERIALDEBUG
         Serial.println( snr );
 #endif
+        // *** NOTE we update the OLED display here right after the NAV-SAT
+        // message is received. The OLED takes around 20ms to update and
+        // we can get serial buffer overflows (and therefore lost packets)
+        // if we try to do it somewhere else. We could move it back to the
+        // main loop and have flags to see that packets have been received
+        // and that the serial buffer is empty before updating...
+        display.clear();
+
+        char temp[40];
+
+        sprintf( temp, "SV:%2.2d  PD:%2.2f", numSV, pDOP );
+        displayStatusMessage( 0, temp );
+
+        sprintf( temp, "0:%2.2d 6:%2.2d S:%3.1f", satTypes[0], satTypes[6], snr );
+        displayStatusMessage( 1, temp );
+
+        sprintf( temp, "%2.2d:%2.2d:%f", hr, mn, sc );
+        displayStatusMessage( 2, temp );
+
+        sprintf( temp, "f:%X ns: %d ck: %d", flags, tacc, ckerrors );
+        //sprintf( temp, "%2.2d:%2.2d:%2.2d", nav.gethour(), nav.getminute(), nav.getsecond() );
+        //static int count = 0;
+        //sprintf( temp, "%d", count++ );
+        displayStatusMessage( 3, temp );
+
+        display.display();
       }
       else if( r == "cfggnss" )
       {
