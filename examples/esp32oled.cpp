@@ -112,11 +112,11 @@ void loop()
   {
     uint8_t c = gpsSerial.read();
 
-    String r = (char *)gps.parse( c );
+    char *r = (char *)gps.parse( c );
 
-    if( r.length() > 0 )
+    if( strlen( r ) > 0 )
     {
-      if( r == "navpvt8" )
+      if( strcmp( r, "navpvt8" ) == 0 )
       {
         if( waitForCfgtp5 )
         {
@@ -153,7 +153,7 @@ void loop()
         flags = nav.getflags();
         tacc =  nav.gettacc();
       }
-      else if( r == "cfgtp5" )
+      else if( strcmp( r, "cfgtp5" ) == 0 )
       {
 #if SERIALDEBUG
         Serial.print( tp.getAntCableDelay() );
@@ -181,7 +181,7 @@ void loop()
 
         waitForCfgtp5 = false; // only need to do it once
       }
-      else if( r == "navsat" )
+      else if( strcmp( r, "navsat" ) == 0 )
       {
         int numsvs = ns.getnumSvs();
 #if SERIALDEBUG
@@ -253,7 +253,7 @@ void loop()
 
         display.display();
       }
-      else if( r == "cfggnss" )
+      else if( strcmp( r, "cfggnss" ) == 0 )
       {
         //Serial.print( "Num Blocks: ");
         int numblocks = gc.getnumConfigBlocks();

@@ -8,8 +8,6 @@
 #ifndef ubloxm8_h
 #define ubloxm8_h
 
-#include "Arduino.h"  // Only using Arduino Strings and HardwareSerial...
-
 #define MAXBUFFERSIZE 1024  // using this to define the maximum buffer size
 
 extern void sendByte(byte b);

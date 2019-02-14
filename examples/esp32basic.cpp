@@ -57,11 +57,11 @@ void loop()
   {
     uint8_t c = gpsSerial.read();
 
-    String r = (char *)gps.parse( c );
+    char *r = (char *)gps.parse( c );
 
-    if( r.length() > 0 )  // the parser will return the name of the message when one is received
+    if( strlen( r ) > 0 )  // the parser will return the name of the message when one is received
     {
-      if( r == "navpvt8" )
+      if( strcmp( r, "navpvt8" ) == 0 )
       {    // There are all kinds of goodies in the UBX-NAV-PVT message
         Serial.println( nav.getnumSV() );
         Serial.print( nav.getlat(), 5 );
