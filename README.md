@@ -16,7 +16,6 @@ To achieve maximum timing accuracy u-blox recommends that PPS be configured for 
 
 This library has the following features:
 
-* Uses the Arduino framework (could easily be made independent of it).
 * The library is contained in a single header file u-blox-m8.h which makes it easy to integrate into a project.
 * It works best with hardware serial ports such as on the ESP32, Teensy and Adafruit M0 and M4 boards.
 * It depends on the main program to read from and write to the M8 receiver so the library is hardware independent.
