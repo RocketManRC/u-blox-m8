@@ -2,6 +2,11 @@
   This sample program uses one of those low cost ESP32 boards with OLED
   displays available from Banggood and AliExpress. These are great for
   evaluating performance of the receiver.
+
+  The ESP32 has 3 hardware serial ports and the first is used for the USB to
+  serial (for debugging). Port 2 is used for connection to the u-blox. Port 3
+  can be used to display incoming data from another device such as a FPGA.
+  The setup of the ports including input and output pins is in the .begin() method.
 */
 
 #include <Arduino.h>
@@ -10,7 +15,19 @@
 // Need library ESP8266_SSD1306 by Daniel Eichhorn (or may say Fabrice Weinberg)
 #include "SSD1306.h"
 
-#define SERIALDEBUG 0
+#define SERIALDEBUG 0  // setting this will send debug messages to the console
+#define SOCKETSERVER 0 // set this to 1 to use a socketserver to send data from serial port 2
+
+#if SOCKETSERVER
+#include <WiFi.h>
+
+WiFiServer wifiServer(23);
+
+HardwareSerial serial2( 2 ); // whatever come in here we will send to the socket client
+
+const char* ssid = "";
+const char* password =  "";
+#endif
 
 HardwareSerial gpsSerial( 1 );
 ublox gps;
@@ -68,7 +85,25 @@ void setup()
 
   Serial.begin( 115200 );
 
-  gpsSerial.begin( 9600, SERIAL_8N1, 15, 16 );
+  gpsSerial.begin( 9600, SERIAL_8N1, 15, 16 ); // input from u-blox on pin15, output to u-blox on 16
+
+#if SOCKETSERVER
+  serial2.begin(  115200, SERIAL_8N1, 14, 0 ); // whatever comes in here on pin 14 we will send to a socket client
+
+  WiFi.begin(ssid, password);
+
+  while( WiFi.status() != WL_CONNECTED )
+  {
+     delay( 1000 );
+     Serial.println("Connecting to WiFi..");
+  }
+
+  Serial.println("Connected to the WiFi network");
+  Serial.println(WiFi.localIP());
+
+  wifiServer.begin();
+  wifiServer.setNoDelay(true);
+#endif
 
   delay( 100 );
   changeBaudrate();  // change to 115200
@@ -95,6 +130,7 @@ void loop()
 {
   static uint32_t ckerrors = 0;
 
+#if SERIALDEBUG
   int g = gps.getchecksumerrors();
 
   if( g != ckerrors )
@@ -103,6 +139,42 @@ void loop()
     Serial.println( g );
     ckerrors = g;
   }
+#else
+  ckerrors = gps.getchecksumerrors();
+#endif
+
+#if SOCKETSERVER
+  static WiFiClient client;
+
+  if( wifiServer.hasClient() && !client.connected() )
+    client = wifiServer.available();
+
+  if( client.connected() )
+  {
+    while( serial2.available() )
+    {
+      byte b;
+      b = serial2.read();
+
+      if( b == '\r' )
+      {
+        char temp[40];
+        if( sc < 10.0 )
+          sprintf( temp, " %2.2d:%2.2d:0%2.9f", hr, mn, sc );
+        else
+          sprintf( temp, " %2.2d:%2.2d:%2.9f", hr, mn, sc );
+
+        client.write( temp );
+
+        client.write( '\r' );
+        client.write( '\n' );
+      }
+      else
+        client.write( b );
+    }
+  }
+#endif
+
   // The following flags are for polling because it seems that a few
   // requests might be needed to get a response. So poll until we get one!
   static bool waitForCfgtp5 = true; // for config of the time pulse
