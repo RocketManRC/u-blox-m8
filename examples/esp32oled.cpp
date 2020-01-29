@@ -15,6 +15,49 @@
 // Need library ESP8266_SSD1306 by Daniel Eichhorn (or may say Fabrice Weinberg)
 #include "SSD1306.h"
 
+#include "driver/timer.h"
+
+// variables for PPS code
+const byte        interruptPin = 13;              // Assign the interrupt pin for firebeetle32
+//const byte        interruptPin = 4;              // Assign the interrupt pin for esp-wrover-kit
+const byte        IRQpin = 25;
+hw_timer_t * timer = NULL;                        // pointer to a variable of type hw_timer_t
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;  // synchs between main loop and interrupt?
+volatile uint32_t ppsCount = 0;					          // increment this for every PPS pulse
+volatile uint64_t timerVal;                       // the timer value on PPS rising edge interrupt
+char deltaPPS[21];                                // store the PPS delta coming from the ESP32
+
+// PPS - Digital Event Interrupt
+// Enters on rising edge
+//=======================================
+void IRAM_ATTR handleInterrupt()
+{
+  //REG_WRITE( GPIO_OUT_W1TS_REG, BIT25 );  // NOTE if IRQpin changed have to edit this!
+  REG_WRITE( GPIO_OUT_W1TC_REG, BIT25 );  // Changed to set low for Pulse Width Tool
+
+  portENTER_CRITICAL_ISR( &mux );
+
+  //timer_get_counter_value( (timer_group_t)0, (timer_idx_t)0, (uint64_t *)&timerVal );
+
+  ppsCount++;
+
+  portEXIT_CRITICAL_ISR(&mux);
+}
+
+void setupPPS()
+{
+  pinMode( IRQpin, OUTPUT ); // pin25 will be used as an output for testing PPS send
+  digitalWrite( IRQpin, 1 ); // initialized high for Pulse Width Tool
+
+  // PPS setup
+  pinMode(interruptPin, INPUT_PULLUP);                                            // sets pin high
+  attachInterrupt(digitalPinToInterrupt(interruptPin), handleInterrupt, RISING); // attaches pin to interrupt on Rising Edge
+
+  timer = timerBegin(0, 8, true);
+  timer_set_counter_value( (timer_group_t)0, (timer_idx_t)0, 0 );                                                                                    // 0 = first timer                                                                                  // 8 is prescaler so 80MHZ divided by 8 = 10MHZ signal ie 0.000001 of a second                                                                                  // true - counts up
+  timerStart(timer);                                                              // starts the timer
+}
+
 #define SERIALDEBUG 0  // setting this will send debug messages to the console
 #define SOCKETSERVER 0 // set this to 1 to use a socketserver to send data from serial port 2
 
@@ -23,13 +66,14 @@
 
 WiFiServer wifiServer(23);
 
-HardwareSerial serial2( 2 ); // whatever come in here we will send to the socket client
-
 const char* ssid = "";
 const char* password =  "";
 #endif
 
+//HardwareSerial serial2( 2 ); // whatever come in here we will send to the socket client
+
 HardwareSerial gpsSerial( 1 );
+
 ublox gps;
 navpvt8 nav( gps );
 cfgtp5 tp( gps );
@@ -87,9 +131,9 @@ void setup()
 
   gpsSerial.begin( 9600, SERIAL_8N1, 15, 16 ); // input from u-blox on pin15, output to u-blox on 16
 
-#if SOCKETSERVER
-  serial2.begin(  115200, SERIAL_8N1, 14, 0 ); // whatever comes in here on pin 14 we will send to a socket client
+  //.begin(  115200, SERIAL_8N1, 14, 0 ); // whatever comes in here on pin 14 we will send to a socket client
 
+#if SOCKETSERVER
   WiFi.begin(ssid, password);
 
   while( WiFi.status() != WL_CONNECTED )
@@ -105,8 +149,8 @@ void setup()
   wifiServer.setNoDelay(true);
 #endif
 
-  delay( 100 );
-  changeBaudrate();  // change to 115200
+  delay( 4000 );
+  changeBaudrate( 115200 );  // change to 115200
 
   delay( 100 );
   gpsSerial.begin( 115200, SERIAL_8N1, 15, 16 );
@@ -124,11 +168,28 @@ void setup()
   enableNavSat();
 
   delay( 100 );
+
+#if SERIALDEBUG
+  Serial.println( "u-blox initialized" );
+#endif
+
+#if !SOCKETSERVER // I think that the timer and interrupts interferes with the socket server...
+  setupPPS();
+#endif
 }
 
 void loop()
 {
   static uint32_t ckerrors = 0;
+
+  static uint32_t lastPpsCount = ppsCount;
+
+  if( (ppsCount != lastPpsCount) && !digitalRead( interruptPin ) )
+  {
+    lastPpsCount = ppsCount;
+
+    digitalWrite( IRQpin, 1 );
+  }
 
 #if SERIALDEBUG
   int g = gps.getchecksumerrors();
@@ -145,13 +206,14 @@ void loop()
 
 #if SOCKETSERVER
   static WiFiClient client;
+  static uint64_t lastTimerVal = timerVal;
 
   if( wifiServer.hasClient() && !client.connected() )
     client = wifiServer.available();
 
   if( client.connected() )
   {
-    while( serial2.available() )
+    while( /* serial2.available() */ false )
     {
       byte b;
       b = serial2.read();
@@ -166,11 +228,42 @@ void loop()
 
         client.write( temp );
 
+        // add the PPS counter to the stream
+        sprintf( temp, " %d", ppsCount );
+        client.write( temp );
+        sprintf( temp, " %lld", timerVal );
+        client.write( temp );
+        long int et = timerVal - lastTimerVal;
+        lastTimerVal = timerVal;
+        sprintf( temp, " %ld", et );
+        client.write( temp );
+
         client.write( '\r' );
         client.write( '\n' );
       }
       else
         client.write( b );
+    }
+  }
+#else // if no SOCKETSERVER then put the PPS delta time on the screen...
+  while( /* serial2.available() */ false )
+  {
+    static int i = 0;
+
+    byte b = /* serial2.read() */ 0;
+
+    if( b == '\r' )
+    {
+      deltaPPS[i] = 0;
+      i = 0;
+    }
+
+    if( i < 21 )
+    {
+      if( i > 7 )
+        deltaPPS[i - 8] = b;
+
+      i++;
     }
   }
 #endif
@@ -310,10 +403,12 @@ void loop()
 
         sprintf( temp, "SV:%2.2d  PD:%2.2f", numSV, pDOP );
         displayStatusMessage( 0, temp );
-
+#if SOCKETSERVER
         sprintf( temp, "0:%2.2d 6:%2.2d S:%3.1f", satTypes[0], satTypes[6], snr );
         displayStatusMessage( 1, temp );
-
+#else
+        displayStatusMessage( 1, deltaPPS );
+#endif
         sprintf( temp, "%2.2d:%2.2d:%f", hr, mn, sc );
         displayStatusMessage( 2, temp );
 

@@ -327,7 +327,7 @@ class ublox
             p[ count++ - 2 ] = c; // don't lose the incoming byte!
             struct _header *packetheader = (_header *)p;
 
-            for( int i = 0; i < sizeof( packetheaders) / sizeof( void * ); i++ )
+            for( unsigned int i = 0; i < sizeof( packetheaders) / sizeof( void * ); i++ )
             {
               struct _header *h = (struct _header *)packetheaders[i];
 
@@ -471,6 +471,8 @@ class navpvt8
     uint8_t getminute() { return ((_navpvt8 *)buffer)->min; }
     uint8_t getsecond() { return ((_navpvt8 *)buffer)->sec; }
     int32_t getnano() { return ((_navpvt8 *)buffer)->nano; }
+    double getgSpeed() { return ((_navpvt8 *)buffer)->gSpeed * 1.0; }
+    double getheadMot() { return ((_navpvt8 *)buffer)->headMot * en5; } // this one too
 
   private:
     uint8_t *buffer;
@@ -546,7 +548,7 @@ class navsat
 
       byte *pNavsathdr = (byte *)&navsathdr;
 
-      for( int i = 0; i < sizeof(navsathdr); i++ )
+      for( unsigned int i = 0; i < sizeof(navsathdr); i++ )
         buffer[i] = pNavsathdr[i];
 
       sendPacket( buffer, navsathdr.length + 4 );
@@ -582,7 +584,7 @@ class cfggnss
 
       byte *pCfggnsshdr = (byte *)&cfggnsshdr;
 
-      for( int i = 0; i < sizeof(cfggnsshdr); i++ )
+      for( unsigned int i = 0; i < sizeof(cfggnsshdr); i++ )
         buffer[i] = pCfggnsshdr[i];
 
       sendPacket( buffer, cfggnsshdr.length + 4 );
@@ -740,8 +742,8 @@ void disableNmea()
     }
 }
 
-// Send a packet to the receiver to change baudrate to 115200
-void changeBaudrate()
+// Send a packet to the receiver to change baudrate (in bits/second)
+void changeBaudrate( uint32_t baudRate )
 {
     // CFG-PRT packet
     byte packet[] = {
@@ -771,15 +773,28 @@ void changeBaudrate()
         0x00, // payload
         0x00, // payload
         0x00, // payload
-        0xC0, // CK_A
-        0x7E, // CK_B
+        0x00, // CK_A
+        0x00, // CK_B
     };
+
+    uint8_t *mbr = (uint8_t *)&baudRate;
+    //*mbr = baudRate;
+    for( int i = 0; i < 4; i++ )
+      packet[i + 14] = *(mbr++);
+
+    byte packetSize = sizeof(packet);
+
+    for (byte j = 0; j < packetSize - 4; j++)
+    {
+        packet[packetSize - 2] += packet[2 + j];
+        packet[packetSize - 1] += packet[packetSize - 2];
+    }
 
     sendPacket(packet, sizeof(packet));
 }
 
-// Send a packet to the receiver to change frequency to 100 ms
-void changeFrequency()
+// Send a packet to the receiver to change nav period to requested ms (1000 = 1 Hz)
+void changeFrequency( uint16_t ms )
 {
     // CFG-RATE packet
     byte packet[] = {
@@ -795,9 +810,53 @@ void changeFrequency()
         0x00, // payload
         0x01, // payload
         0x00, // payload
-        0x7A, // CK_A
-        0x12, // CK_B
+        0x00, // CK_A
+        0x00, // CK_B
     };
+
+    uint16_t *msp = (uint16_t *)&packet[6];
+    *msp = ms;
+
+    byte packetSize = sizeof(packet);
+
+    for (byte j = 0; j < packetSize - 4; j++)
+    {
+        packet[packetSize - 2] += packet[2 + j];
+        packet[packetSize - 1] += packet[packetSize - 2];
+    }
+
+    sendPacket(packet, sizeof(packet));
+}
+
+// Send a packet to the receiver to change dynamic model
+void changeDynamicModel( uint8_t model )
+{
+    // CFG-NAV5 packet
+    byte packet[44] = {
+        0xB5, // sync char 1
+        0x62, // sync char 2
+        0x06, // class
+        0x24, // id
+        0x24, // length
+        0x00, // length
+        0x01, // payload - choose dynamic model
+        0x00,
+        0x00 // payload - dynModel
+    };
+
+    uint8_t *dmp = (uint8_t *)&packet[8];
+    *dmp = model;
+
+    byte packetSize = sizeof(packet);
+
+    packet[packetSize - 2] = 0;
+    packet[packetSize - 1] = 0;
+
+    for (byte j = 0; j < packetSize - 4; j++)
+    {
+        packet[packetSize - 2] += packet[2 + j];
+        packet[packetSize - 1] += packet[packetSize - 2];
+    }
 
     sendPacket(packet, sizeof(packet));
 }

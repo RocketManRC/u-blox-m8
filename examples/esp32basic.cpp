@@ -35,7 +35,7 @@ void setup()
 
   delay( 100 );
 
-  changeBaudrate();  // tell the receiver to use 115200 baud (hard coded to 115200 right now)
+  changeBaudrate( 115200 );  // tell the receiver to use 115200 baud (hard coded to 115200 right now)
   delay( 100 );
 
   gpsSerial.begin( 115200, SERIAL_8N1, 15, 16 );  // change our hardware serial port to 115200 baud
@@ -53,7 +53,7 @@ void setup()
 
 void loop()
 {
-  if( gpsSerial.available() )
+  while( gpsSerial.available() )
   {
     uint8_t c = gpsSerial.read();
 

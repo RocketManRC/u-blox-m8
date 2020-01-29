@@ -1,0 +1,21 @@
+{
+  "name": "u-blox-m8",
+  "keywords": "u-blox, gps",
+  "description": "u-blox GPS library for M8 modules optimized for timing applications",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/rocketmanrc/u-blox-m8"
+  },
+  "authors":
+  {
+    "name": "Rick MacDonald",
+    "email": "rocketmanrc@gmail.com",
+    "url": "https://github.com/rocketmanrc",
+    "maintainer": true
+  },
+  "homepage": "https://github.com/rocketmanrc/u-blox-m8",
+  "version": "0.0.2",
+  "frameworks": "arduino",
+  "platforms": "espressif32, teensy"
+}
