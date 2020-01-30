@@ -1,12 +1,12 @@
 {
   "name": "u-blox-m8",
-  "keywords": "u-blox, ublox, gps, gnss",
-  "description": "A u-blox GPS library for M8 modules optimized for time and date applications",
-  "version": "0.0.2",
-  "frameworks": "arduino",
   "repository": {
     "type": "git",
     "url": "https://github.com/rocketmanrc/u-blox-m8.git"
   },
+  "keywords": "u-blox, ublox, gps, gnss",
+  "description": "A u-blox GPS library for M8 modules optimized for time and date applications",
+  "version": "0.0.2",
+  "frameworks": "arduino",
   "platforms": [ "espressif32", "teensy" ]
 }
